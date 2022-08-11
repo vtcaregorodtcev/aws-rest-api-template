@@ -1,0 +1,64 @@
+service: ${self:custom.env.serviceName, 'unknown'}-service
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  memorySize: ${self:custom.env.memorySize}
+  stage: ${env:ENV, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  stackName: ${self:service}-${self:provider.stage}
+  profile: ${self:custom.profiles.${self:provider.stage}}
+  logRetentionInDays: ${self:custom.env.lambdaLogsRotation}
+  apiGateway:
+    apiKeys:
+      - value: ${self:custom.env.apiKey}
+    usagePlan:
+      quota:
+        limit: 5000
+        offset: 0
+        period: DAY
+  iam:
+    role: ${self:custom.env.role}
+  environment:
+    REGION: ${self:provider.region}
+    SERVICE_NAME: ${self:service}
+    STAGE: ${self:provider.stage}
+
+    TEST_TABLE_NAME: ${self:custom.env.testTableName}
+
+custom:
+  profiles: ${file(./sls/profiles.yml)}
+  deploymentBuckets: ${file(./sls/deployment-buckets.yml)}
+  accountId: ${aws:accountId}
+  namePrefix: ${self:service}-${self:provider.stage}-${self:provider.region}
+  webpack:
+    packager: "pnpm"
+    keepOutputDirectory: true
+  env: ${file(./sls/env.yml)}
+
+package:
+  individually: true
+  excludeDevDependencies: true
+  patterns:
+    - "!.git"
+    - "!.gitignore"
+    - "!.editorconfig"
+    - "!.eslintignore"
+    - "!.eslintrc.js"
+    - "!sls/**"
+    - "!README.md"
+    - "!serverless.yml"
+    - "!jest.config.js"
+    - "!tsconfig.json"
+    - "!webpack.config.json"
+
+plugins:
+  - serverless-webpack
+  - serverless-deployment-bucket
+  - serverless-uuid
+
+functions:
+  - ${file(./sls/functions.yml)}
+
+resources:
+  - ${file(./sls/resources.yml)}

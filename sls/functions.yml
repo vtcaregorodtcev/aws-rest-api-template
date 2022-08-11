@@ -1,0 +1,9 @@
+hello:
+  handler: src/handlers/hello.handler
+  name: ${self:custom.namePrefix}-hello-handler
+  events:
+    - http:
+        method: get
+        path: hello
+        cors: true
+        private: true
